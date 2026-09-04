@@ -134,11 +134,17 @@
             color: #f8fafc;
             font-size: 0.95rem;
             outline: none;
+            color-scheme: dark;
             transition: all 0.2s ease;
         }
         .form-control:focus {
             border-color: #6366f1;
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        .form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+            opacity: 0.9;
         }
         .actions {
             display: flex;

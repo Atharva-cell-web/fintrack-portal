@@ -166,9 +166,20 @@
             color: #f8fafc;
             font-size: 0.875rem;
             outline: none;
+            color-scheme: dark;
         }
         .filter-input:focus {
             border-color: #6366f1;
+        }
+        .filter-input::-webkit-calendar-picker-indicator,
+        .form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+            opacity: 0.9;
+        }
+        .filter-input::-webkit-calendar-picker-indicator:hover,
+        .form-control::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
         }
         .filter-actions {
             display: flex;
