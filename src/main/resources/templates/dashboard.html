@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTrack - Personal Finance Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Navbar */
+        .navbar {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .nav-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #f8fafc;
+        }
+        .user-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .user-name {
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        /* Container & Layout */
+        .main-container {
+            max-width: 1320px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            flex: 1;
+        }
+        
+        /* Summary Metrics Grid (5 Cards) */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .metric-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .metric-title {
+            font-size: 0.825rem;
+            color: #94a3b8;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .metric-value {
+            font-size: 1.625rem;
+            font-weight: 700;
+        }
+        .metric-value.salary { color: #38bdf8; }
+        .metric-value.budget { color: #818cf8; }
+        .metric-value.expenses { color: #f43f5e; }
+        .metric-value.remaining { color: #10b981; }
+        .metric-value.savings { color: #a855f7; }
+
+        /* Filter Control Bar */
+        .filter-panel {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 1rem;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            flex: 1;
+            min-width: 160px;
+        }
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .filter-input {
+            padding: 0.625rem 0.875rem;
+            border-radius: 0.5rem;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            color: #f8fafc;
+            font-size: 0.875rem;
+            outline: none;
+        }
+        .filter-input:focus {
+            border-color: #6366f1;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Main Section Grids */
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.75rem;
+            margin-bottom: 2rem;
+        }
+        .grid-3col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.75rem;
+            margin-bottom: 2rem;
+        }
+        @media (max-width: 992px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+        .panel-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        /* Buttons & Badges */
+        .btn-primary {
+            background: linear-gradient(90deg, #6366f1, #4f46e5);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-primary:hover {
+            opacity: 0.95;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+        .btn-secondary {
+            background: #334155;
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover {
+            background: #475569;
+            color: white;
+        }
+        .btn-edit {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 0.375rem;
+        }
+        .btn-edit:hover { background: rgba(99, 102, 241, 0.3); }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.3); }
+
+        /* Status Badges for Budget Health */
+        .health-badge {
+            padding: 0.35rem 0.875rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .badge-healthy { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-moderate { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-info { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+        /* Progress Bar */
+        .progress-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 9999px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.4s ease;
+        }
+
+        /* Table */
+        .table-responsive {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.925rem;
+        }
+        th {
+            background: rgba(15, 23, 42, 0.6);
+            color: #94a3b8;
+            padding: 0.875rem 1rem;
+            font-weight: 500;
+            border-bottom: 1px solid #334155;
+        }
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+        }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 0.875rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Analytics Stats Grid */
+        .analytics-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .stat-item {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 0.875rem;
+            border-radius: 0.625rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .stat-label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
+        .stat-val { font-size: 1.15rem; font-weight: 700; color: #f8fafc; }
+
+        /* Financial Insight Items */
+        .insight-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-left: 4px solid #6366f1;
+            padding: 0.875rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .insight-icon {
+            font-size: 1.25rem;
+        }
+
+        /* Modal Overlay & Card */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .form-control:focus { border-color: #6366f1; }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.75rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="/dashboard" class="navbar-brand">FinTrack</a>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link active">Dashboard</a>
+                <a href="/profile" class="nav-link">Profile</a>
+            </div>
+        </div>
+        <div class="user-nav">
+            <span class="user-name">
+                Welcome, <strong th:text="${user.fullName != null and !user.fullName.blank ? user.fullName : user.email}">user@example.com</strong>
+            </span>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn-logout">Logout</button>
+            </form>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <div th:if="${errorMessage}" class="alert-error" th:text="${errorMessage}"></div>
+
+        <!-- Task 1: Top 5 Summary Metrics Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Monthly Salary</div>
+                <div class="metric-value salary" th:text="${'₹' + #numbers.formatDecimal(monthlySalary, 1, 'COMMA', 2, 'POINT')}">₹0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Monthly Budget</div>
+                <div class="metric-value budget" th:text="${'₹' + #numbers.formatDecimal(monthlyBudget, 1, 'COMMA', 2, 'POINT')}">₹0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Total Expenses</div>
+                <div class="metric-value expenses" th:text="${'₹' + #numbers.formatDecimal(totalExpenses, 1, 'COMMA', 2, 'POINT')}">₹0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Remaining Budget</div>
+                <div class="metric-value remaining" th:text="${'₹' + #numbers.formatDecimal(remainingBudget, 1, 'COMMA', 2, 'POINT')}">₹0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Savings</div>
+                <div class="metric-value savings" th:text="${'₹' + #numbers.formatDecimal(savings, 1, 'COMMA', 2, 'POINT')}">₹0.00</div>
+            </div>
+        </div>
+
+        <!-- Task 2: Expense Search and Filtering Bar -->
+        <div class="filter-panel">
+            <form th:action="@{/dashboard}" method="get" class="filter-form">
+                <div class="filter-group">
+                    <label for="monthFilter">Month</label>
+                    <input type="month" id="monthFilter" name="month" class="filter-input" th:value="${selectedMonth}">
+                </div>
+
+                <div class="filter-group">
+                    <label for="categoryFilter">Category</label>
+                    <select id="categoryFilter" name="category" class="filter-input">
+                        <option value="ALL" th:selected="${selectedCategory == null or selectedCategory == 'ALL'}">All Categories</option>
+                        <option value="Food" th:selected="${selectedCategory == 'Food'}">Food</option>
+                        <option value="Housing" th:selected="${selectedCategory == 'Housing'}">Housing</option>
+                        <option value="Travel" th:selected="${selectedCategory == 'Travel'}">Travel</option>
+                        <option value="Shopping" th:selected="${selectedCategory == 'Shopping'}">Shopping</option>
+                        <option value="Entertainment" th:selected="${selectedCategory == 'Entertainment'}">Entertainment</option>
+                        <option value="Healthcare" th:selected="${selectedCategory == 'Healthcare'}">Healthcare</option>
+                        <option value="Education" th:selected="${selectedCategory == 'Education'}">Education</option>
+                        <option value="Utilities" th:selected="${selectedCategory == 'Utilities'}">Utilities</option>
+                        <option value="Other" th:selected="${selectedCategory == 'Other'}">Other</option>
+                    </select>
+                </div>
+
+                <div class="filter-group" style="flex: 2;">
+                    <label for="searchFilter">Search Description</label>
+                    <input type="text" id="searchFilter" name="search" class="filter-input" placeholder="Search expenses..." th:value="${selectedSearch}">
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn-primary">Apply Filters</button>
+                    <a href="/dashboard" class="btn-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Middle Section: Expense History Table + Category Breakdown Chart -->
+        <div class="grid-2col">
+            <!-- Expenses Table Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">Expense History</h2>
+                        <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">
+                            Filtered Expenses Total: <strong style="color: #f43f5e;" th:text="${'₹' + #numbers.formatDecimal(totalExpenses, 1, 'COMMA', 2, 'POINT')}">₹0.00</strong>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="openModal()">+ Add Expense</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table th:if="${!expenses.empty}">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="expense : ${expenses}">
+                                <td th:text="${expense.date}">2026-09-04</td>
+                                <td th:text="${expense.description}">Grocery Shopping</td>
+                                <td><span class="badge" th:text="${expense.category}">Food</span></td>
+                                <td style="font-weight: 600;" th:text="${'₹' + #numbers.formatDecimal(expense.amount, 1, 'COMMA', 2, 'POINT')}">₹120.00</td>
+                                <td>
+                                    <a th:href="@{/expenses/edit/{id}(id=${expense.id})}" class="btn-edit">Edit</a>
+                                    <form th:action="@{/expenses/delete/{id}(id=${expense.id})}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn-danger" onclick="return confirm('Are you sure you want to delete this expense?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div th:if="${expenses.empty}" class="empty-state">
+                        No expenses found for the selected filters.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task 5 (Chart 1): Category Breakdown Chart Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Category Breakdown</h2>
+                </div>
+                <div style="position: relative; width: 100%; height: 300px; display: flex; align-items: center; justify-content: center;">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lower Section: Budget Health, Monthly Analytics, Monthly Spending Trend Chart & Financial Insights -->
+        <div class="grid-3col">
+            <!-- Task 3: Budget Health Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Budget Health</h2>
+                    <span th:class="${'health-badge ' + budgetHealth.cssClass}" th:text="${budgetHealth.status}">Healthy</span>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: #94a3b8;">
+                        <span>Budget Used: <strong style="color: #f8fafc;" th:text="${budgetHealth.budgetUsedPct + '%'}">0%</strong></span>
+                        <span>Remaining: <strong style="color: #10b981;" th:text="${'₹' + #numbers.formatDecimal(budgetHealth.remainingBudget, 1, 'COMMA', 2, 'POINT')}">₹0.00</strong></span>
+                    </div>
+                    
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill"
+                             th:style="${'width: ' + (budgetHealth.budgetUsedPct > 100 ? 100 : budgetHealth.budgetUsedPct) + '%; background: ' + (budgetHealth.status == 'Healthy' ? '#22c55e' : (budgetHealth.status == 'Moderate' ? '#3b82f6' : (budgetHealth.status == 'Warning' ? '#f59e0b' : '#ef4444')))}"></div>
+                    </div>
+
+                    <p style="font-size: 0.875rem; color: #cbd5e1; margin-top: 0.75rem;" th:text="${budgetHealth.message}">
+                        Your spending is within a healthy range.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Task 4: Monthly Financial Analytics Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Monthly Analytics</h2>
+                    <form th:action="@{/dashboard}" method="get">
+                        <input type="hidden" name="month" th:value="${selectedMonth}">
+                        <input type="hidden" name="category" th:value="${selectedCategory}">
+                        <input type="hidden" name="search" th:value="${selectedSearch}">
+                        <input type="month" name="analyticsMonth" class="filter-input" style="padding: 0.35rem 0.5rem; font-size: 0.8rem;"
+                               th:value="${selectedAnalyticsMonth}" onchange="this.form.submit()">
+                    </form>
+                </div>
+
+                <div th:if="${monthlyAnalytics.expenseCount > 0}">
+                    <div class="analytics-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Expenses</div>
+                            <div class="stat-val" style="color: #f43f5e;" th:text="${'₹' + #numbers.formatDecimal(monthlyAnalytics.totalExpenses, 1, 'COMMA', 2, 'POINT')}">₹0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Average Expense</div>
+                            <div class="stat-val" style="color: #38bdf8;" th:text="${'₹' + #numbers.formatDecimal(monthlyAnalytics.averageExpense, 1, 'COMMA', 2, 'POINT')}">₹0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Largest Expense</div>
+                            <div class="stat-val" style="color: #a855f7;" th:text="${'₹' + #numbers.formatDecimal(monthlyAnalytics.largestExpense.amount, 1, 'COMMA', 2, 'POINT')}">₹0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Top Category</div>
+                            <div class="stat-val" style="color: #818cf8;" th:text="${monthlyAnalytics.topCategory}">N/A</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 0.875rem; font-size: 0.825rem; color: #94a3b8; text-align: right;">
+                        Budget Used: <strong style="color: #f8fafc;" th:text="${monthlyAnalytics.budgetUsedPct + '%'}">0%</strong>
+                    </div>
+                </div>
+
+                <div th:if="${monthlyAnalytics.expenseCount == 0}" class="empty-state" style="padding: 1.5rem 0;">
+                    No expenses recorded for this month.
+                </div>
+            </div>
+
+            <!-- Task 6: Dynamic Rule-Based Financial Insights Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Financial Insights</h2>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <div th:each="insight : ${financialInsights}" class="insight-card">
+                        <span class="insight-icon">💡</span>
+                        <span th:text="${insight}">Dynamic financial tip...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task 5 (Chart 2): Recent Monthly Spending Trend Chart Panel -->
+        <div class="panel" style="margin-bottom: 2rem;">
+            <div class="panel-header">
+                <h2 class="panel-title">Monthly Spending Trend (Last 6 Months)</h2>
+            </div>
+            <div style="position: relative; width: 100%; height: 280px;">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Form for Adding Expense -->
+    <div class="modal-overlay" id="expenseModal">
+        <div class="modal-card">
+            <h2 class="panel-title" style="margin-bottom: 1.5rem;">Add New Expense</h2>
+            <form th:action="@{/expenses/add}" th:object="${newExpense}" method="post">
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input type="text" id="description" th:field="*{description}" class="form-control" placeholder="e.g. Groceries, Rent, Coffee" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">Amount (₹)</label>
+                    <input type="number" step="0.01" min="0.01" id="amount" th:field="*{amount}" class="form-control" placeholder="0.00" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" th:field="*{category}" class="form-control" required>
+                        <option value="Food">Food</option>
+                        <option value="Housing">Housing</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Education">Education</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date" th:field="*{date}" class="form-control" required>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript for Modal & Chart.js -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const categoryData = /*[[${categoryTotals}]]*/ {};
+        const trendDataMap = /*[[${recentTrends}]]*/ {};
+        /*]]>*/
+
+        function openModal() {
+            document.getElementById('expenseModal').classList.add('active');
+            const dateInput = document.getElementById('date');
+            if (!dateInput.value) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('expenseModal').classList.remove('active');
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // --- Chart 1: Category Breakdown Doughnut Chart ---
+            const catLabels = Object.keys(categoryData);
+            const catValues = Object.values(categoryData);
+            const catCtx = document.getElementById('categoryChart').getContext('2d');
+
+            if (catLabels.length === 0) {
+                catCtx.font = "14px Inter";
+                catCtx.fillStyle = "#94a3b8";
+                catCtx.textAlign = "center";
+                catCtx.fillText("No category data to display.", catCtx.canvas.width / 2, catCtx.canvas.height / 2);
+            } else {
+                new Chart(catCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: catLabels,
+                        datasets: [{
+                            data: catValues,
+                            backgroundColor: [
+                                '#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#3b82f6', '#ef4444', '#06b6d4', '#64748b'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#cbd5e1', font: { family: 'Inter', size: 12 }, padding: 15 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- Chart 2: Recent Monthly Spending Bar Chart ---
+            const trendLabels = Object.keys(trendDataMap);
+            const trendValues = Object.values(trendDataMap);
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+
+            new Chart(trendCtx, {
+                type: 'bar',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: 'Total Expenses (₹)',
+                        data: trendValues,
+                        backgroundColor: 'rgba(99, 102, 241, 0.65)',
+                        borderColor: '#6366f1',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 11 },
+                                callback: function(value) { return '₹' + value; }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
